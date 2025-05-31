@@ -1,1 +1,72 @@
-# Placeholder docker-compose file
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: resume_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - resume-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: resume_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - resume-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: resume_backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - analyzer-python
+    networks:
+      - resume-network
+
+  analyzer-python:
+    build:
+      context: ./analyzer-python
+    container_name: resume_analyzer_python
+    ports:
+      - "5000:5000"
+    networks:
+      - resume-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: resume_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - resume-network
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  resume-network:
+    driver: bridge
