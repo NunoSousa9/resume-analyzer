@@ -12,9 +12,14 @@ dist/
 __pycache__/
 *.pyc
 *.pyo
+venv/
 
 # Env files
 .env
+*.env
+
+# Hugging Face
+~/.cache/huggingface/
 
 # IDEs
 .vscode/
