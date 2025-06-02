@@ -5,43 +5,26 @@ from transformers import pipeline
 app = Flask(__name__)
 CORS(app)
 
-# Usa o pipeline localmente
-pipe = pipeline("text2text-generation", model="google/flan-t5-small")
+# Carrega modelo público, sem token necessário
+pipe = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 
 @app.route("/analyze-pdf", methods=["POST"])
 def analyze_pdf():
     data = request.get_json()
     text = data.get("content", "")
 
-    prompt = f"""
-You are an AI career assistant. Analyze the following resume and extract:
-
-- A 2-3 sentence summary.
-- A list of hard skills.
-- A list of soft skills.
-
-Resume:
-{text}
-"""
-
     try:
-        result = pipe(prompt, max_new_tokens=200)[0]["generated_text"]
-        print("Generated output:", result)
+        summary_result = pipe("Summarize this resume:\n" + text, max_length=130, min_length=30, do_sample=False)[0]["summary_text"]
+        print("➡️ Summary:", summary_result)
 
-        summary, hard, soft = "", [], []
-
-        for line in result.splitlines():
-            if line.lower().startswith("summary:"):
-                summary = line.split(":", 1)[1].strip()
-            elif line.lower().startswith("hard skills:"):
-                hard = [s.strip() for s in line.split(":", 1)[1].split(",")]
-            elif line.lower().startswith("soft skills:"):
-                soft = [s.strip() for s in line.split(":", 1)[1].split(",")]
+        # Simples heurística só para testes iniciais
+        hard_skills = [word for word in ["Java", "Spring Boot", "PostgreSQL", "Docker", "Kubernetes"] if word.lower() in text.lower()]
+        soft_skills = [word for word in ["teamwork", "communication", "leadership", "problem-solving"] if word.lower() in text.lower()]
 
         return jsonify({
-            "summary": summary,
-            "hard_skills": hard,
-            "soft_skills": soft
+            "summary": summary_result,
+            "hard_skills": hard_skills,
+            "soft_skills": soft_skills
         })
 
     except Exception as e:
@@ -50,4 +33,5 @@ Resume:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
+    print("Device set to use cpu")
     app.run(host="0.0.0.0", port=5000)
